@@ -43,6 +43,7 @@ class MM {
     public static $headers = array();
     public static $output;
     public static $request;
+    public static $status = 200;
     public static $start_time;
 
     /**
@@ -61,7 +62,7 @@ class MM {
         define('MM_LIB_PATH', MM_APP_PATH . MM_DS . 'libraries');
 
         # Setup request variable
-        self::$request = parse_url($_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+        self::$request = parse_url($_SERVER['REQUEST_URI']);
 
         # Initialize loader
         self::$_loader = new MM_Loader();
