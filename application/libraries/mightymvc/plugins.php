@@ -166,6 +166,7 @@ class MM_Router {
     public static function route() {
         $instance   = self::get_instance();
         $controller = false;
+        $action = false;
 
         MM::trigger('pre-route');
 
@@ -174,19 +175,25 @@ class MM_Router {
 
                 $tmp = explode('.', $controller_class);
                 $controller = $tmp[0];
+                @$action = $tmp[1];
 
                 array_shift($matches);
-                $instance->params = $matches;
-                
                 break;
             }
         }
 
-        MM::set_controller($controller);
-        if (@$action = $tmp[1]) {
-            MM::set_action($action);
+        if (!$controller) {
+            $controller = 'Error_Index';
+            $action = 'Error';
+            MM::$status = 404;
         }
 
+        $instance->params = (($matches) ? $matches : array());
+
+        MM::set_controller($controller);
+        if ($action) {
+            MM::set_action($action);
+        }
         MM::trigger('post-route');
     }
 
