@@ -21,13 +21,13 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- * 
+ *
  * @package MM
  */
 
 /**
  * mightyMVC framework
- * 
+ *
  * $package MM
  */
 class MM {
@@ -66,14 +66,14 @@ class MM {
 
         # Initialize loader
         self::$_loader = new MM_Loader();
-        
+
         # Setup autoloader
         spl_autoload_register(array(self::$_loader, 'autoload'));
 
         # Load main config
-        self::$_config = self::load('config', 'main'); 
+        self::$_config = self::load('config', 'main');
 
-        # Load event manager 
+        # Load event manager
         self::$_event_manager = new MM_Event_Manager();
 
         # Modify PHP environment configuration
@@ -144,7 +144,7 @@ class MM {
         # Cleanup
         self::trigger('cleanup');
     }
-    
+
     public static function dispatcher($controller_name, $action) {
         # Load controller
         $controller = MM::load('controller', $controller_name);
@@ -152,13 +152,13 @@ class MM {
         # Dispatch request
         $controller->$action();
     }
-    
+
     public static function dispatch() {
         ob_start();
-        
+
         $dispatcher = self::$dispatch;
         $dispatcher(self::$_controller, self::$_action);
-        
+
         MM::$output .= ob_get_clean();
     }
 
@@ -169,7 +169,7 @@ class MM {
     /*
      * Framework config accessor method
      *
-     * @param string $key 
+     * @param string $key
      * @static
      */
     public static function config($key) {
@@ -192,7 +192,7 @@ class MM {
     }
 
     /**
-     * Register event with framework environment. 
+     * Register event with framework environment.
      *
      * @param string $event
      * @param Closure $callback
@@ -273,7 +273,7 @@ class MM_Event_Manager {
     public function register($event, Closure $callback, $priority = 0) {
         # Set sorting status for event
         $this->_status[$event] = false;
-        
+
         # Register event
         $this->_events[$event][$priority][] = $callback;
     }
@@ -296,7 +296,7 @@ class MM_Event_Manager {
             krsort($this->_events[$event]);
             $this->_status[$event] = true;
         }
-     
+
         $this->_stack[] = $event;
 
         $output = "";
@@ -308,7 +308,7 @@ class MM_Event_Manager {
 
                     # Execute callback
                     $return = $callback($input);
-                    
+
                     # End buffer and store output
                     $output .= ob_get_clean();
                 }
@@ -316,9 +316,9 @@ class MM_Event_Manager {
         }
 
         # Append output to framework request buffer
-        MM::$output .=  (@!$this->_config['debug']) ? $output : 
+        MM::$output .=  (@!$this->_config['debug']) ? $output :
                         "<p>######## Start: $event ########</p>" .$output . "<p>######## End: $event ########</p>";
-            
+
         array_pop($this->_stack);
     }
 }
@@ -348,7 +348,7 @@ class MM_Loader {
             $class_path = explode('_', $class);
             $library    = $class_path[0];
             $core       = MM_LIB_PATH . MM_DS. strtolower($library) . MM_DS . 'core.php';
-            
+
             if (file_exists($core)) {
                 require $core;
 
@@ -358,11 +358,11 @@ class MM_Loader {
                     return;
 
                 if (@!$location = $this->_class_map[$class]) {
-                    # Class not defined in loader.  We assume it is included in 
+                    # Class not defined in loader.  We assume it is included in
                     # core and return from autoloader.  If the class has not been loaded
                     # then an exception will be thrown.
 
-                    return; 
+                    return;
                 }
             }
         }
@@ -389,17 +389,17 @@ class MM_Loader {
     public function load_controller($controller) {
         require MM_APP_PATH . MM_DS . 'controllers' . MM_DS . str_replace('_', MM_DS, strtolower($controller)) . '.php';
         $controller .= '_Controller';
-        
+
         return new $controller();
     }
-    
+
     /*
      *
      */
     public function load_extension($path) {
         require MM_APP_PATH . MM_DS . 'extensions' . MM_DS . $path . '.php';
     }
-    
+
     public function load_model($model) {
         $this->_class_map[ucfirst($model) . '_Model'] = MM_APP_PATH . MM_DS . 'models' . MM_DS . $model . '.php';
     }
@@ -408,7 +408,7 @@ class MM_Loader {
 /*
  *
  */
-class MM_View {
+class MM_View extends ArrayObject {
 
     protected $_file;
     protected $_vars;
@@ -419,32 +419,23 @@ class MM_View {
     public function __construct($path, $vars = array()) {
         $this->_file = MM_APP_PATH . MM_DS . 'views' . MM_DS . $path . '.php';
         $this->_vars = $vars;
+
+        parent::__construct(array(), ArrayObject::ARRAY_AS_PROPS);
     }
 
-    /*
-     *
-     */
-    public function __get($key) {
-        return @$this->_vars[$key];
-    }
-
-    /*
-     *
-     */
-    public function __set($key, $val) {
-        $this->_vars[$key] = $val;
-        return $this;
-    }
-    
     public function get_vars() {
         return $this->_vars;
     }
-    
+
+    public function offsetGet($offset) {
+    	return ((parent::offsetExists($offset)) ? parent::offsetGet($offset) : null);
+    }
+
     public function set_vars($vars) {
         $this->_vars = $vars;
         return $this;
     }
-    
+
     public function display($path) {
         $view = new MM_View($path, $this->_vars);
         return $view->render();
@@ -455,11 +446,11 @@ class MM_View {
      */
     public function render() {
         MM::trigger('pre-render', array($this->_file, $this->_vars));
-        
+
         ob_start();
-        require $this->_file;
+        require_once $this->_file;
         return ob_get_clean();
-        
+
         MM::trigger('post-render', array($this->_file, $this->_vars));
     }
 }
