@@ -1,8 +1,8 @@
 <?php
 
-class Error_IndexController {
+class Error_ErrorController {
     
-    public function Error_Action() {
+    public function ErrorAction() {
         # clear response output
         MM::$output = '';
 

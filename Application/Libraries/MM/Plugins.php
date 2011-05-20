@@ -184,16 +184,16 @@ class MM_Router {
         }
 
         if (!$controller) {
-            $controller = 'Error_Index';
+            $controller = 'Error_Error';
             $action = 'Error';
             MM::$status = 404;
         }
 
         $instance->params = (($matches) ? $matches : array());
 
-        MM::set_controller($controller);
+        MM::setController($controller);
         if ($action) {
-            MM::set_action($action);
+            MM::setAction($action);
         }
         MM::trigger('post-route');
     }

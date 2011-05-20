@@ -119,7 +119,7 @@ class MM
             // Fire post dispatch event
             self::trigger('post-dispatch');
         } catch (Exception $e) {
-            MM::setController('Error_Index');
+            MM::setController('Error_Error');
             MM::setAction('Error');
 
             MM::$_error = $e;
