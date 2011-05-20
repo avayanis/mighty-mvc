@@ -1,6 +1,7 @@
 <?php
 
-class MM_Acl {
+class MM_Acl
+{
     private static $_instance;
 
     private $_config;
@@ -8,7 +9,7 @@ class MM_Acl {
     private $_permissions = array();
 
     public static function init() {
-        $instance = self::get_instance();
+        $instance = self::getInstance();
 
         $config = MM::load('config', 'acl');
         $instance->_config = $config[MM_ENV];
@@ -19,7 +20,7 @@ class MM_Acl {
     }
 
     public static function initialize() {
-        $instance = self::get_instance();
+        $instance = self::getInstance();
 
         foreach ($instance->_config['resources'] as $resource => $roles) {
             if (preg_match('{' . $resource . '}', MM::$request['path'])) {
@@ -28,12 +29,12 @@ class MM_Acl {
         }
     }
 
-    public static function has_permission($role, $test = null) {
+    public static function hasPermission($role, $test = null) {
         if (!self::get_instance()->_roles)
             return true;
     }
 
-    public static function get_instance() {
+    public static function getInstance() {
         if (!self::$_instance)
             self::$_instance = new self();
 
@@ -62,19 +63,19 @@ class MM_Layout {
         }, (PHP_INT_MAX * -1)-1);
     }
     
-    public static function set_layout($layout) {
+    public static function setLayout($layout) {
         self::$_layout = $layout;
     }
     
-    public static function get_layout() {
+    public static function getLayout() {
         return self::$_layout;
     }
     
-    public static function set_component($key, $contents) {
+    public static function setComponent($key, $contents) {
         self::$_components[$key] = $contents;
     }
     
-    public static function get_component($key = null) {
+    public static function getComponent($key = null) {
         if ($key) {
             return self::$_components[$key];
         }
@@ -84,7 +85,7 @@ class MM_Layout {
     
     public static function render() {
         $view = new MM_View(self::$_layout);
-        $view->set_vars(self::$_components);
+        $view->setVars(self::$_components);
         echo $view->render();
     }
 }
@@ -96,7 +97,7 @@ class MM_Redbean {
             $configs = MM::config('redbean');
 
             // Load RedBean DB ORM
-            MM::load('extension', 'rb');
+            MM::load('extension', 'RB');
 
             foreach ($configs as $dbname => $config) {
                 // Configure MySQL connection
@@ -139,7 +140,7 @@ class MM_Router {
 
     public static function init() {
         # Initialize singleton instance
-        $instance = self::get_instance();
+        $instance = self::getInstance();
 
         # Load routes        
         $routes = MM::load('config', 'routes');
@@ -151,11 +152,11 @@ class MM_Router {
         }, (PHP_INT_MAX * -1)-1);
 
         MM::register('pre-dispatch', function() {
-            MM::$dispatch = function($controller_name, $action) {
-                $instance = MM_Router::get_instance();
+            MM::$dispatch = function($name, $action) {
+                $instance = MM_Router::getInstance();
                 
                 # Load controller
-                $controller = MM::load('controller', $controller_name);
+                $controller = MM::load('controller', $name);
 
                 call_user_func_array(array($controller, $action), 
                     $instance->params);
@@ -164,16 +165,16 @@ class MM_Router {
     }
 
     public static function route() {
-        $instance   = self::get_instance();
+        $instance   = self::getInstance();
         $controller = false;
         $action = false;
 
         MM::trigger('pre-route');
 
-        foreach ($instance->_routes as $route => $controller_class) {
+        foreach ($instance->_routes as $route => $target) {
             if (preg_match('{' . $route . '}', MM::$request['path'], $matches)) {
 
-                $tmp = explode('.', $controller_class);
+                $tmp = explode('.', $target);
                 $controller = $tmp[0];
                 @$action = $tmp[1];
 
@@ -197,7 +198,7 @@ class MM_Router {
         MM::trigger('post-route');
     }
 
-    public static function get_instance() {
+    public static function getInstance() {
         if (!self::$_instance) {
             self::$_instance = new self();
         }

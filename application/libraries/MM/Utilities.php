@@ -18,14 +18,14 @@ class MM_Registry {
     private function __construct() {}
 
     public static function get($key) {
-       return self::get_instance()->_data[$key];
+       return self::getInstance()->_data[$key];
     }
 
     public static function set($key, $value) {
-        self::get_instance()->_data[$key] = $value;
+        self::getInstance()->_data[$key] = $value;
     }
 
-    public static function get_instance() {
+    public static function getInstance() {
         if (!self::$_instance)
             self::$_instance = new self();
             

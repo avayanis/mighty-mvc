@@ -30,13 +30,13 @@
  * 
  * $package MM
  */
-class MM {
-
-    private static $_action = 'Index_Action';
+class MM
+{
+    private static $_action = 'IndexAction';
     private static $_config;
-    private static $_controller = 'Main_Index';
+    private static $_controller = 'Main_IndexController';
     private static $_error = null;
-    private static $_event_manager;
+    private static $_eventManager;
     private static $_loader;
 
     public static $dispatch;
@@ -44,7 +44,7 @@ class MM {
     public static $output;
     public static $request;
     public static $status = 200;
-    public static $start_time;
+    public static $timeStart;
 
     /**
      * Initialize the framework environment
@@ -53,46 +53,46 @@ class MM {
      * @static
      */
     private static function init($path, $env) {
-        self::$start_time = microtime(true);
+        self::$timeStart = microtime(true);
 
-        # Define mightyMVC environment constants
+        // Define mightyMVC environment constants
         define('MM_DS', DIRECTORY_SEPARATOR);
         define('MM_ENV', $env);
-        define('MM_APP_PATH', $path . MM_DS . 'application');
-        define('MM_LIB_PATH', MM_APP_PATH . MM_DS . 'libraries');
+        define('MM_APP_PATH', $path . MM_DS . 'Application');
+        define('MM_LIB_PATH', MM_APP_PATH . MM_DS . 'Libraries');
 
-        # Setup request variable
+        // Setup request variable
         self::$request = parse_url($_SERVER['REQUEST_URI']);
 
-        # Initialize loader
+        // Initialize loader
         self::$_loader = new MM_Loader();
         
-        # Setup autoloader
+        // Setup autoloader
         spl_autoload_register(array(self::$_loader, 'autoload'));
 
-        # Load main config
-        self::$_config = self::load('config', 'main'); 
+        // Load main config
+        self::$_config = self::load('config', 'Main');
 
-        # Load event manager 
-        self::$_event_manager = new MM_Event_Manager();
+        // Load event manager 
+        self::$_eventManager = new MM_EventManager();
 
-        # Modify PHP environment configuration
+        // Modify PHP environment configuration
         if (@$settings = self::$_config[MM_ENV]['php_settings']) {
             foreach ($settings as $setting => $value) {
                 ini_set($setting, $value);
             }
         }
 
-        # Load plugins
+        // Load plugins
         if (@$plugins = self::$_config[MM_ENV]['plugins']) {
             foreach ($plugins as $plugin) {
                 MM::extend($plugin);
             }
         }
 
-        # Set dispatcher
-        MM::set_dispatcher(function($controller_name, $action) {
-            MM::dispatcher($controller_name, $action);
+        // Set dispatcher
+        MM::setDispatcher(function($controller, $action) {
+            MM::dispatcher($controller, $action);
         });
     }
 
@@ -105,51 +105,51 @@ class MM {
      */
     public static function serve($path, $env) {
         try {
-            # Initialize framework
+            // Initialize framework
             self::init($path, $env);
 
-            # Fire post init event
+            // Fire post init event
             self::trigger('post-init');
 
-            # Fire pre dispatch event
+            // Fire pre dispatch event
             self::trigger('pre-dispatch');
 
             MM::dispatch();
 
-            # Fire post dispatch event
+            // Fire post dispatch event
             self::trigger('post-dispatch');
         } catch (Exception $e) {
-            MM::set_controller('Error_Index');
-            MM::set_action('Error');
+            MM::setController('Error_Index');
+            MM::setAction('Error');
 
             MM::$_error = $e;
 
-            # Fire pre error event
+            // Fire pre error event
             self::trigger('pre-error');
 
             MM::$output .= ob_get_clean();
 
-            MM::set_dispatcher(function($controller_name, $action) {
-                MM::dispatcher($controller_name, $action);
+            MM::setDispatcher(function($controller, $action) {
+                MM::dispatcher($controller, $action);
             });
 
             MM::dispatch();
 
-            # Fire post error event
+            // Fire post error event
             self::trigger('post-error');
         }
 
         self::render();
 
-        # Cleanup
+        // Cleanup
         self::trigger('cleanup');
     }
     
-    public static function dispatcher($controller_name, $action) {
-        # Load controller
-        $controller = MM::load('controller', $controller_name);
+    public static function dispatcher($controller, $action) {
+        // Load controller
+        $controller = MM::load('controller', $controller);
 
-        # Dispatch request
+        // Dispatch request
         $controller->$action();
     }
     
@@ -162,7 +162,7 @@ class MM {
         MM::$output .= ob_get_clean();
     }
 
-    public static function get_error() {
+    public static function getError() {
         return self::$_error;
     }
 
@@ -180,15 +180,15 @@ class MM {
      *
      */
     public static function load($type, $name) {
-        $call = "load_$type";
+        $call = "load" . ucfirst($type);
         return self::$_loader->$call($name);
     }
 
     /*
      *
      */
-    public static function extend($plugin_name) {
-        $plugin_name::init();
+    public static function extend($plugin) {
+        $plugin::init();
     }
 
     /**
@@ -199,7 +199,7 @@ class MM {
      * @param int $priority
      */
     public static function register($event, $callback, $priority = 0) {
-        self::$_event_manager->register($event, $callback, $priority);
+        self::$_eventManager->register($event, $callback, $priority);
     }
 
     /*
@@ -216,22 +216,22 @@ class MM {
     /*
      *
      */
-    public static function set_action($action) {
-        self::$_action = $action . '_Action';
+    public static function setAction($action) {
+        self::$_action = "{$action}Action";
     }
 
     /*
      *
      */
-    public static function set_dispatcher(Closure $callback) {
+    public static function setDispatcher(Closure $callback) {
         self::$dispatch = $callback;
     }
 
     /*
      *
      */
-    public static function set_controller($controller) {
-        self::$_controller = $controller;
+    public static function setController($controller) {
+        self::$_controller = "{$controller}Controller";
     }
 
     /**
@@ -240,7 +240,7 @@ class MM {
      * @param string $event
      */
     public static function trigger($event, array $input = array(), &$return = null) {
-        self::$_event_manager->trigger($event, $input, $return);
+        self::$_eventManager->trigger($event, $input, $return);
     }
 }
 
@@ -249,8 +249,8 @@ class MM {
  *
  * @package MM
  */
-class MM_Event_Manager {
-
+class MM_EventManager
+{
     private $_config;
     private $_events = array();
     private $_stack = array();
@@ -271,10 +271,10 @@ class MM_Event_Manager {
      * @param int $priority
      */
     public function register($event, Closure $callback, $priority = 0) {
-        # Set sorting status for event
+        // Set sorting status for event
         $this->_status[$event] = false;
         
-        # Register event
+        // Register event
         $this->_events[$event][$priority][] = $callback;
     }
 
@@ -303,13 +303,13 @@ class MM_Event_Manager {
         foreach ($this->_events[$event] as $priority => $callbacks) {
             foreach ($callbacks as $callback) {
                 if ($callback instanceof Closure) {
-                    # Create buffer for callback
+                    // Create buffer for callback
                     ob_start();
 
-                    # Execute callback
+                    // Execute callback
                     $return = $callback($input);
                     
-                    # End buffer and store output
+                    // End buffer and store output
                     $output .= ob_get_clean();
                 }
             }
@@ -328,23 +328,23 @@ class MM_Event_Manager {
  *
  * @package MM
  */
-class MM_Loader {
-
-    private $_class_map = array(
-        'MM_Acl' => 'mightymvc/plugins.php',
-        'MM_Layout' => 'mightymvc/plugins.php',
-        'MM_Redbean' => 'mightymvc/plugins.php',
-        'MM_Router' => 'mightymvc/plugins.php',
-        'MM_Session' => 'mightymvc/plugins.php',
-        'MM_Registry' => 'mightymvc/utilities.php',
-        'MM_Utilities' => 'mightymvc/utilities.php',
+class MM_Loader
+{
+    private $_classMap = array(
+        'MM_Acl' => 'MM/Plugins.php',
+        'MM_Layout' => 'MM/Plugins.php',
+        'MM_Redbean' => 'MM/Plugins.php',
+        'MM_Router' => 'MM/Plugins.php',
+        'MM_Session' => 'MM/Plugins.php',
+        'MM_Registry' => 'MM/Utilities.php',
+        'MM_Utilities' => 'MM/Utilities.php',
     );
 
     /*
      *
      */
     public function autoload($class) {
-        if (@!$location = $this->_class_map[$class]) {
+        if (@!$location = $this->_classMap[$class]) {
             $class_path = explode('_', $class);
             $library    = $class_path[0];
             $core       = MM_LIB_PATH . MM_DS. strtolower($library) . MM_DS . 'core.php';
@@ -352,7 +352,7 @@ class MM_Loader {
             if (file_exists($core)) {
                 require $core;
 
-                $this->_class_map = array_merge($library::_libraries(), $this->_class_map);
+                $this->_classMap = array_merge($library::_libraries(), $this->_classMap);
 
                 if (!isset($class_path[1]))
                     return;
@@ -379,16 +379,15 @@ class MM_Loader {
     /*
      *
      */
-    public function load_config($name) {
+    public function loadConfig($name) {
         return require MM_APP_PATH . MM_DS . 'configs' . MM_DS . $name . '.php';
     }
 
     /*
      *
      */
-    public function load_controller($controller) {
-        require MM_APP_PATH . MM_DS . 'controllers' . MM_DS . str_replace('_', MM_DS, strtolower($controller)) . '.php';
-        $controller .= '_Controller';
+    public function loadController($controller) {
+        require MM_APP_PATH . MM_DS . 'controllers' . MM_DS . str_replace('_', MM_DS, $controller) . '.php';
         
         return new $controller();
     }
@@ -396,20 +395,20 @@ class MM_Loader {
     /*
      *
      */
-    public function load_extension($path) {
+    public function loadExtension($path) {
         require MM_APP_PATH . MM_DS . 'extensions' . MM_DS . $path . '.php';
     }
     
-    public function load_model($model) {
-        $this->_class_map[ucfirst($model) . '_Model'] = MM_APP_PATH . MM_DS . 'models' . MM_DS . $model . '.php';
+    public function loadModel($model) {
+        $this->_classMap[ucfirst($model) . '_Model'] = MM_APP_PATH . MM_DS . 'models' . MM_DS . $model . '.php';
     }
 }
 
 /*
  *
  */
-class MM_View {
-
+class MM_View extends ArrayObject
+{
     protected $_file;
     protected $_vars;
 
@@ -420,27 +419,12 @@ class MM_View {
         $this->_file = MM_APP_PATH . MM_DS . 'views' . MM_DS . $path . '.php';
         $this->_vars = $vars;
     }
-
-    /*
-     *
-     */
-    public function __get($key) {
-        return @$this->_vars[$key];
-    }
-
-    /*
-     *
-     */
-    public function __set($key, $val) {
-        $this->_vars[$key] = $val;
-        return $this;
-    }
     
-    public function get_vars() {
+    public function getVars() {
         return $this->_vars;
     }
     
-    public function set_vars($vars) {
+    public function setVars($vars) {
         $this->_vars = $vars;
         return $this;
     }
@@ -458,8 +442,9 @@ class MM_View {
         
         ob_start();
         require $this->_file;
-        return ob_get_clean();
+        $output = ob_get_clean();
         
         MM::trigger('post-render', array($this->_file, $this->_vars));
+        return $output;
     }
 }
