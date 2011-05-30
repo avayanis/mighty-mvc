@@ -1,7 +1,7 @@
 <?php
 
-# Load framework
-require __DIR__ . "/application/libraries/mightymvc/core.php";
+// Load framework
+require __DIR__ . "/Application/Libraries/MM/Core.php";
 
-# Serve request
+// Serve request
 MM::serve(__DIR__, 'dev');
