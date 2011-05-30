@@ -2,9 +2,11 @@ Mighty MVC
 ========
 Mighty MVC is small but powerful, PHP MVC Framework.
 
+**Note: Until Mighty reaches version 1.0, I will not promise backwards compatibility.**
+
 Todo
 ----
-Documentation coming soon!
+Add unit tests
 
 Credits
 -------

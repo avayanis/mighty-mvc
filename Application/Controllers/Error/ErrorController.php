@@ -3,8 +3,8 @@
 class Error_ErrorController {
     
     public function ErrorAction() {
-        # clear response output
-        MM::$output = '';
+        // clear response
+        MM::$response = '';
 
         switch (MM::$status) {
             case 404:
