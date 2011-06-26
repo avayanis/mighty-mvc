@@ -87,8 +87,8 @@ class MM
     public static $response;
 
     /**
-     * Array result from parse_url on $_SERVER['REQUEST_URI'].
-     * @var array
+     * REQUEST_URI path
+     * @var string
      */
     public static $request;
 
@@ -119,7 +119,7 @@ class MM
         define('MM_LIB_PATH', MM_APP_PATH . MM_DS . 'Libraries');
 
         // Setup request variable
-        self::$request = parse_url($_SERVER['REQUEST_URI']);
+        self::$request = ($pos = strpos($_SERVER['REQUEST_URI'], '?')) ? substr($_SERVER['REQUEST_URI'], 0, $pos) : $_SERVER['REQUEST_URI'];
 
         // Initialize loader
         self::$_loader = MM_Loader::getInstance();

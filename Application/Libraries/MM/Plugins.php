@@ -86,7 +86,7 @@ class MM_Acl
         $instance = self::getInstance();
 
         foreach ($instance->_config['resources'] as $resource => $roles) {
-            if (preg_match('{' . $resource . '}', MM::$request['path'])) {
+            if (preg_match('{' . $resource . '}', MM::$request)) {
                 $instance->_roles = $roles;
             } 
         }
@@ -344,7 +344,7 @@ class MM_Router
         MM::trigger('pre-route');
 
         foreach ($instance->_routes as $route => $target) {
-            if (preg_match('{' . $route . '}', MM::$request['path'], $matches)) {
+            if (preg_match('{' . $route . '}', MM::$request, $matches)) {
 
                 $tmp = explode('.', $target);
                 $controller = $tmp[0];
