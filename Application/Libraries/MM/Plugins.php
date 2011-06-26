@@ -313,7 +313,7 @@ class MM_Router
 
         // Load routes        
         $routes = MM::load('config', 'Routes');
-        $instance->_routes = $routes[MM_ENV];
+        $instance->_routes = @$routes[MM_ENV];
 
         // Register router events
         MM::register('post-init', function() {
