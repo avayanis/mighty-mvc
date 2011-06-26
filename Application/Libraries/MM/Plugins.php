@@ -238,12 +238,16 @@ class MM_Redbean
         MM::register('post-init', function() {
             $configs = MM::config('redbean');
 
+			if (!is_array($configs)) {
+				throw new Exception("RedBean configuration missing.");
+			}
+	
             // Load RedBean DB ORM
             MM::load('extension', 'RB');
 
             foreach ($configs as $dbname => $config) {
-                // Configure MySQL connection
-                $dsn = "mysql:host={$config['host']};dbname={$config['name']};port={$config['port']}";
+                // Configure connection
+                $dsn = "{$config['connector']}:host={$config['host']};dbname={$config['name']};port={$config['port']}";
 
                 if (!isset($config['mode'])) {
                     $config['mode'] = 'production';
@@ -308,7 +312,7 @@ class MM_Router
         $instance = self::getInstance();
 
         // Load routes        
-        $routes = MM::load('config', 'routes');
+        $routes = MM::load('config', 'Routes');
         $instance->_routes = $routes[MM_ENV];
 
         // Register router events

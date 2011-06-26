@@ -466,7 +466,7 @@ class MM_Loader
         if (@!$location = $this->_classMap[$class]) {
             $class_path = explode('_', $class);
             $library    = $class_path[0];
-            $core       = MM_LIB_PATH . MM_DS. strtolower($library) . MM_DS . 'core.php';
+            $core       = MM_LIB_PATH . MM_DS. $library . MM_DS . 'Core.php';
             
             if (file_exists($core)) {
                 require $core;
@@ -562,7 +562,7 @@ class MM_View extends ArrayObject
      * @param array|null $array Array to initiate ArrayObject storage.
      */
     public function __construct($path, array $array = null) {
-        $this->_file = MM_APP_PATH . MM_DS . 'views' . MM_DS . $path . '.php';
+        $this->_file = MM_APP_PATH . MM_DS . 'Views' . MM_DS . $path . '.php';
 
         parent::__construct(array(), ArrayObject::ARRAY_AS_PROPS);
         
