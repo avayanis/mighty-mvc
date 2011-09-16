@@ -71,8 +71,7 @@ class MM_Acl
     public static function init() {
         $instance = self::getInstance();
 
-        $config = MM::load('config', 'acl');
-        $instance->_config = $config[MM_ENV];
+        $instance->_config = MM::load('config', 'acl');
 
         MM::register('post-init', function() {
             MM_Acl::initialize(); 
@@ -313,7 +312,7 @@ class MM_Router
 
         // Load routes        
         $routes = MM::load('config', 'Routes');
-        $instance->_routes = @$routes[MM_ENV];
+        $instance->_routes = @$routes;
 
         // Register router events
         MM::register('post-init', function() {

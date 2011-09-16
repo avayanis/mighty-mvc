@@ -1,0 +1,25 @@
+#mmdebug_container {
+	position: fixed;
+	top: 0; left: 0;
+	width: 100%;
+}
+
+#mmdebug_body {
+	background: none repeat scroll 0 0 #D5E1DD;
+	height: 400px;
+	display: none;
+}
+
+#mmdebug_header {
+    background: none repeat scroll 0 0 #D5E1DD;
+    -moz-border-radius-bottomleft: 6px;
+    -moz-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+	border-bottom-left-radius: 12px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+    text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.25);
+	margin: 0;
+	padding: 0 8px;
+	line-height: 40px;
+	color: #2B3E42;
+	float: right;
+}

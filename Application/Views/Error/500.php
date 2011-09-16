@@ -4,7 +4,7 @@
         <title>Server Error</title>
     </head>
     <body>
-        <h1><?=$this->error->getMessage();?></h1>
-        <pre><?=$this->error->getTraceAsString();?></pre>
+        <h1><?php echo $this->error->getMessage();?></h1>
+        <pre><?php echo $this->error->getTraceAsString();?></pre>
     </body>
 </html>

@@ -6,6 +6,6 @@
     <body>
         <h1>Welcome to  Mighty MVC</h1>
         <p>If you are seeing this page, then your Mighty MVC installation is successful.</p>
-        <p>Page rendered in: <?=number_format((microtime(true) - MM::$timeStart), 4);?> seconds.</p>
+        <p>Page rendered in: <?php echo number_format((microtime(true) - MM::$timeStart), 4);?> seconds.</p>
     </body>
 </html>

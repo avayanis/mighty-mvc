@@ -6,6 +6,7 @@ Mighty MVC is small but powerful, PHP MVC Framework.
 
 Todo
 ----
+Debug Mode
 Add unit tests
 
 Credits
