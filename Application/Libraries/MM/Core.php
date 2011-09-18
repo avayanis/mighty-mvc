@@ -376,13 +376,19 @@ class MM_EventManager
      * @param Closure $callback
      * @param int $priority
      */
-    public function register($event, Closure $callback, $priority = 0)
+    public function register($events, Closure $callback, $priority = 0)
 	{
-        // Set sorting status for event
-        $this->_status[$event] = false;
-        
-        // Register event
-        $this->_events[$event][$priority][] = $callback;
+	    if (!is_array($events)) {
+	        $events = array($events);
+	    }
+
+	    foreach ($events as $event) {
+            // Set sorting status for event
+            $this->_status[$event] = false;
+
+            // Register event
+            $this->_events[$event][$priority][] = $callback;
+	    }
     }
 
     /**

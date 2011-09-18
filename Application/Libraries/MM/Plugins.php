@@ -204,7 +204,7 @@ class MM_Layout
         // Configure layout
         $instance->setLayout($config['default']);
         
-        MM::register('post-dispatch', function() use ($instance) {
+        MM::register(array('post-dispatch', 'post-error'), function() use ($instance) {
             $instance->render();
         }, (PHP_INT_MAX * -1)-1);
     }
