@@ -312,7 +312,7 @@ class MM_Router
 
         // Load routes        
         $routes = MM::load('config', 'Routes');
-        $instance->_routes = @$routes;
+        $instance->_routes = $routes;
 
         // Register router events
         MM::register('post-init', function() {
@@ -347,7 +347,10 @@ class MM_Router
 
                 $tmp = explode('.', $target);
                 $controller = $tmp[0];
-                @$action = $tmp[1];
+                
+                if (isset($tmp[1])) {
+                    $action = $tmp[1];
+                }
 
                 array_shift($matches);
                 break;

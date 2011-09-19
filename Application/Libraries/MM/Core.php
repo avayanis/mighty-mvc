@@ -110,7 +110,7 @@ class MM
      * @param string $env Configuration section to load.
      */
     private static function init($path, $env)
-	{
+    {
         self::$timeStart = microtime(true);
 
         // Define Mighty environment constants
@@ -121,7 +121,7 @@ class MM
 
         // Setup request variable
         self::$request = ($pos = strpos($_SERVER['REQUEST_URI'], '?')) ? 
-							substr($_SERVER['REQUEST_URI'], 0, $pos) : $_SERVER['REQUEST_URI'];
+                            substr($_SERVER['REQUEST_URI'], 0, $pos) : $_SERVER['REQUEST_URI'];
 
         // Initialize loader
         self::$_loader = MM_Loader::getInstance();
@@ -133,23 +133,23 @@ class MM
         self::$_config = self::load('config', 'Main');
 
         // Load event manager
-		if (!@self::$_config['debug']) {
-			self::$_eventManager = new MM_EventManager();
-		} else {
-			self::$_eventManager = new MM_DebugEventManager();
-			MM::extend('MM_Debug');
-		}
+        if (!isset(self::$_config['debug']) || !self::$_config['debug']) {
+            self::$_eventManager = new MM_EventManager();
+        } else {
+            self::$_eventManager = new MM_DebugEventManager();
+            MM::extend('MM_Debug');
+        }
 
         // Modify PHP environment configuration
-        if (@$settings = self::$_config['php_settings']) {
-            foreach ($settings as $setting => $value) {
+        if (isset(self::$_config['php_settings'])) {            
+            foreach (self::$_config['php_settings'] as $setting => $value) {
                 ini_set($setting, $value);
             }
         }
 
         // Load plugins
-        if (@$plugins = self::$_config['plugins']) {
-            foreach ($plugins as $plugin) {
+        if (isset(self::$_config['plugins'])) {
+            foreach (self::$_config['plugins'] as $plugin) {
                 MM::extend($plugin);
             }
         }
@@ -166,7 +166,7 @@ class MM
      * @param string $env Configuration section to load.
      */
     public static function serve($path, $env)
-	{
+    {
         try {
             // initialize framework
             self::init($path, $env);
@@ -202,7 +202,7 @@ class MM
             self::trigger('post-error');
         }
 
-		// render response to client
+        // render response to client
         self::render();
     }
     
@@ -212,7 +212,7 @@ class MM
      * @param string $action Action name.
      */
     public static function dispatcher($controller, $action)
-	{
+    {
         // Load controller
         $controller = MM::load('controller', $controller);
 
@@ -224,7 +224,7 @@ class MM
      * Start output buffer and call dispatcher.
      */
     public static function dispatch()
-	{
+    {
         ob_start();
         
         $dispatcher = self::$dispatch;
@@ -237,7 +237,7 @@ class MM
      * Return any errors caught by Mighty.
      */
     public static function getError()
-	{
+    {
         return self::$_error;
     }
 
@@ -246,8 +246,10 @@ class MM
      * @param string $key Configuration array key.
      */
     public static function config($key)
-	{
-        return @self::$_config[$key];
+    {
+        if (isset(self::$_config[$key])) {
+            return self::$_config[$key];
+        }
     }
 
     /**
@@ -256,7 +258,7 @@ class MM
      * @param string $name File name.
      */
     public static function load($type, $name)
-	{
+    {
         return self::$_loader->load($type, $name);
     }
 
@@ -265,7 +267,7 @@ class MM
      * @param string $plugin Plugin name.
      */
     public static function extend($plugin)
-	{
+    {
         $plugin::init();
     }
 
@@ -276,7 +278,7 @@ class MM
      * @param int $priority Callback priority.
      */
     public static function register($event, $callback, $priority = 0)
-	{
+    {
         self::$_eventManager->register($event, $callback, $priority);
     }
 
@@ -286,7 +288,7 @@ class MM
      * @param string|null $response Optional content to output to client.
      */
     public static function render($response = null)
-	{
+    {
         foreach (self::$headers as $header => $value) {
             header("$header: $value");
         }
@@ -299,7 +301,7 @@ class MM
      * @param string $action Method name.
      */
     public static function setAction($action)
-	{
+    {
         self::$_action = "{$action}Action";
     }
 
@@ -308,7 +310,7 @@ class MM
      * @param Closure $callback
      */
     public static function setDispatcher(Closure $callback)
-	{
+    {
         self::$dispatch = $callback;
     }
 
@@ -317,7 +319,7 @@ class MM
      * @param string $controller Controller name.
      */
     public static function setController($controller)
-	{
+    {
         self::$_controller = "{$controller}Controller";
     }
 
@@ -328,7 +330,7 @@ class MM
      * @param array|null $return Optional return variable to store event results.
      */
     public static function trigger($event, array $input = array(), array &$return = null)
-	{
+    {
         self::$_eventManager->trigger($event, $input, $return);
     }
 }
@@ -366,7 +368,7 @@ class MM_EventManager
      * Constructor - create new Mighty EventManager.
      */
     public function __construct()
-	{
+    {
         $this->_config = MM::config('events');
     }
 
@@ -377,18 +379,18 @@ class MM_EventManager
      * @param int $priority
      */
     public function register($events, Closure $callback, $priority = 0)
-	{
-	    if (!is_array($events)) {
-	        $events = array($events);
-	    }
+    {
+        if (!is_array($events)) {
+            $events = array($events);
+        }
 
-	    foreach ($events as $event) {
+        foreach ($events as $event) {
             // Set sorting status for event
             $this->_status[$event] = false;
 
             // Register event
             $this->_events[$event][$priority][] = $callback;
-	    }
+        }
     }
 
     /**
@@ -398,7 +400,7 @@ class MM_EventManager
      * @param array|null $return Optional return variable to store event results.
      */
     public function trigger($event, array $input = array(), array &$return = null)
-	{
+    {
         if ((($max = $this->_config['max_depth']) && ($count = count($this->_stack)) > $max)) {
             throw new Exception("Maximum event depth ($max) reached.");
         }
@@ -455,8 +457,8 @@ class MM_Loader
      */
     private $_classMap = array(
         'MM_Acl' => 'MM/Plugins.php',
-		'MM_Debug' => 'MM/Debug/Debug.php',
-		'MM_DebugEventManager' => 'MM/Debug/Debug.php',
+        'MM_Debug' => 'MM/Debug/Debug.php',
+        'MM_DebugEventManager' => 'MM/Debug/Debug.php',
         'MM_Layout' => 'MM/Plugins.php',
         'MM_Redbean' => 'MM/Plugins.php',
         'MM_Registry' => 'MM/Utilities.php',
@@ -465,10 +467,10 @@ class MM_Loader
         'MM_Utilities' => 'MM/Utilities.php',
     );
 
-	/**
-	 * @var array of loaded libraries
-	 */
-	private $_loaded = array('MM' => true);
+    /**
+     * @var array of loaded libraries
+     */
+    private $_loaded = array('MM' => true);
     
     /**
      * @var MM_Loader Singleton instance
@@ -484,7 +486,7 @@ class MM_Loader
      * Get singleton instance of MM_Loader
      */
     public static function getInstance()
-	{
+    {
         if (!self::$_instance) {
             self::$_instance = new self();
         }
@@ -497,22 +499,22 @@ class MM_Loader
      * @param string $class Classname
      */
     public function autoload($class)
-	{
-        if (@!$location = $this->_classMap[$class]) {
+    {
+        if (!isset($this->_classMap[$class])) {
             $class_path = explode('_', $class);
             $library    = $class_path[0];
             $core       = MM_LIB_PATH . MM_DS. $library . MM_DS . 'Core.php';
 
             if (file_exists($core) && !isset($this->_loaded[$library])) {
                 require $core;
-				$this->_loaded[$library] = true;
+                $this->_loaded[$library] = true;
 
                 $this->_classMap = array_merge($library::_libraries(), $this->_classMap);
 
                 if (!isset($class_path[1]))
                     return;
 
-                if (@!$location = $this->_classMap[$class]) {
+                if (!isset($this->_classMap[$class])) {
                     /** 
                      * Class not defined in loader.  We assume it is included in 
                      * core and return from autoloader.  If the class has not been loaded
@@ -524,7 +526,7 @@ class MM_Loader
             }
         }
 
-        if ($location) {
+        if ($location = $this->_classMap[$class]) {
             if ($location[0] == '/') {
                 require $location;
             } else {
@@ -539,7 +541,7 @@ class MM_Loader
      * @param string $name Filename to load.
      */
     public function load($type, $name)
-	{
+    {
         $call = 'load' . ucfirst($type);
         return $this->$call($name);
     }
@@ -549,9 +551,9 @@ class MM_Loader
      * @param string $name Filename.
      */
     private function loadConfig($name)
-	{
+    {
         $config = require MM_APP_PATH . MM_DS . 'Configs' . MM_DS . $name . '.php';
-		return $config[MM_ENV];
+        return $config[MM_ENV];
     }
 
     /**
@@ -560,7 +562,7 @@ class MM_Loader
      * @param string $name Controller name.
      */
     private function loadController($name)
-	{
+    {
         require MM_APP_PATH . MM_DS . 'Controllers' . MM_DS . str_replace('_', MM_DS, $name) . '.php';
         
         return new $name();
@@ -571,7 +573,7 @@ class MM_Loader
      * @param string $path Relative file path in extensions directory.
      */
     private function loadExtension($path)
-	{
+    {
         require MM_APP_PATH . MM_DS . 'Extensions' . MM_DS . $path . '.php';
     }
 
@@ -580,7 +582,7 @@ class MM_Loader
      * @param string $model Model name.
      */
     private function loadModel($model)
-	{
+    {
         $this->_classMap["{$model}_Model"] = MM_APP_PATH . MM_DS . 'Models' . MM_DS . str_replace('_', MM_DS, $model) . '.php';
     }
 }
@@ -604,7 +606,7 @@ class MM_View extends ArrayObject
      * @param array|null $array Array to initiate ArrayObject storage.
      */
     public function __construct($path, array $array = null)
-	{
+    {
         $this->_file = MM_APP_PATH . MM_DS . 'Views' . MM_DS . $path . '.php';
 
         parent::__construct(array(), ArrayObject::ARRAY_AS_PROPS);
@@ -620,7 +622,7 @@ class MM_View extends ArrayObject
      * @param string $index View property to return.
      */
     public function offsetGet($index)
-	{
+    {
         if (!parent::offsetExists($index)) {
             return;
         }
@@ -633,7 +635,7 @@ class MM_View extends ArrayObject
      * @param string $path Relative file path to view script.
      */
     public function display($path)
-	{
+    {
         $view = new MM_View($path, $this->getArrayCopy());
         return $view->render();
     }
@@ -642,7 +644,7 @@ class MM_View extends ArrayObject
      * Render view script.
      */
     public function render()
-	{
+    {
         MM::trigger('pre-viewRender', array($this->_file, $this->getArrayCopy()));
         
         ob_start();
