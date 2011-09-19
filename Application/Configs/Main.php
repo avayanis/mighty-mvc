@@ -16,7 +16,7 @@ return array(
         'error_handler' => '',
 
 		// Debug mode
-		'debug' => false,
+		'debug' => true,
         
         // MM_Events
         'events' => array(
