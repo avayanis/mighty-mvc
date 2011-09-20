@@ -35,6 +35,21 @@
  */
 class MM_Utilities
 {
+    public static function isAjax()
+    {
+        static $isAjax = null;
+
+        if (is_null($isAjax)) {
+            $isAjax = false;
+            
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                $isAjax = true;
+            }
+        }
+        
+        return $isAjax;
+    }
+    
     /**
      * @param string $path Redirect location.
      */

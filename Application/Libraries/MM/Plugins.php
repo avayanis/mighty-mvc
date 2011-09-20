@@ -137,6 +137,8 @@ class MM_Layout
      * @var string
      */
     private $_layout;
+    
+    private $_enabled = true;
 
     /**
      * Private constructor to enforce singleton.
@@ -177,14 +179,26 @@ class MM_Layout
         
         $this->_components;
     }
+    
+    public function disable()
+    {
+        $this->_enabled = false;
+    }
+    
+    public function enable()
+    {
+        $this->_enabled = true;
+    }
 
     /**
      * Render layout
      */
     public function render() {
-        $view = new MM_View($this->_layout);
-        $view->exchangeArray($this->_components);
-        echo $view->render();
+        if ($this->_enabled) {
+            $view = new MM_View($this->_layout);
+            $view->exchangeArray($this->_components);
+            echo $view->render();
+        }
     }
 
     /**
@@ -347,7 +361,7 @@ class MM_Router
 
                 $tmp = explode('.', $target);
                 $controller = $tmp[0];
-                
+
                 if (isset($tmp[1])) {
                     $action = $tmp[1];
                 }

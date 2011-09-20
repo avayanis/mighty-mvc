@@ -184,18 +184,23 @@ class MM
         } catch (Exception $e) {
             MM::$_error = $e;
 
+            if (MM::$status == 200) {
+                MM::$status = 500;
+            }
+
+            MM::setController('Error_Error');
+            MM::setAction('Error');
+
             // pre error event
             self::trigger('pre-error');
 
             MM::$response .= ob_get_clean();
             
-            MM::setController('Error_Error');
-            MM::setAction('Error');
-            
             MM::setDispatcher(function($controller, $action) {
                 MM::dispatcher($controller, $action);
             });
 
+            MM::$headers['Status'] = MM::$status;
             MM::dispatch();
 
             // post error event
@@ -563,6 +568,12 @@ class MM_Loader
      */
     private function loadController($name)
     {
+        $filePath = MM_APP_PATH . MM_DS . 'Controllers' . MM_DS . str_replace('_', MM_DS, $name) . '.php';
+        
+        if (!file_exists($filePath)) {
+            throw new Exception("Controller ($name) does not exist.");
+        }
+        
         require MM_APP_PATH . MM_DS . 'Controllers' . MM_DS . str_replace('_', MM_DS, $name) . '.php';
         
         return new $name();
