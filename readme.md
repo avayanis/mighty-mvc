@@ -7,6 +7,10 @@ Mighty MVC is small but powerful, PHP MVC Framework.
 Todo
 ----
 Debug Mode
+* Event stack
+* Event execution trace
+* Memory usage
+* System info (including phpinfo())
 Add unit tests
 
 Credits

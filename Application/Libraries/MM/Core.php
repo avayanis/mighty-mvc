@@ -28,250 +28,149 @@
  * @license    http://en.wikipedia.org/wiki/MIT_License     MIT License
  */
 
-/**
- * Mighty MVC framework.
- * @category Mighty MVC
- * @package Mighty Core
- */
-class MM
+namespace MM;
+
+use Closure;
+use Exception;
+
+class Core
 {
-    /**
-     * @var string
-     */
-    private static $_action = 'IndexAction';
+    private static $_instance;
+    
+    private $_action = 'IndexAction';
+    private $_config;
+    private $_controller = 'Main\\IndexController';
+    private $_dispatcher;
+    private $_eventManager;
+    private $_loader;
+    private $_request;
+    private $_response;
 
-    /**
-     * Runtime configuration.
-     * @var array
-     */
-    private static $_config;
-
-    /**
-     * @var string
-     */
-    private static $_controller = 'Main_IndexController';
-
-    /**
-     * @var Exception
-     */
-    private static $_error = null;
-
-    /**
-     * Mighty event manager instance.
-     * @var MM_EventManager
-     */
-    private static $_eventManager;
-
-    /**
-     * Mighty class loader instance.
-     * @var MM_Loader
-     */
-    private static $_loader;
-
-    /**
-     * Dispatch callback function - called after pre-dispatch event.
-     * @var Closure
-     */
-    public static $dispatch;
-
-    /**
-     * Array of headers to output before response body.
-     * @var array
-     */
-    public static $headers = array();
-
-    /**
-     * Response body.
-     * @var string
-     */
-    public static $response;
-
-    /**
-     * REQUEST_URI path
-     * @var string
-     */
-    public static $request;
-
-    /**
-     * Status code.
-     * @var int
-     */
-    public static $status = 200;
-
-    /**
-     * Request system time.
-     * @var float
-     */
-    public static $timeStart;
-
-    /**
-     * Initialize the framework environment.
-     * @param string $path Path to application parent directory.
-     * @param string $env Configuration section to load.
-     */
-    private static function init($path, $env)
+    public function init($path, $env)
     {
-        self::$timeStart = microtime(true);
-
+        Profiler::getInstance()->add('start');
+        
         // Define Mighty environment constants
-        define('MM_DS', DIRECTORY_SEPARATOR);
         define('MM_ENV', $env);
+        define('MM_DS', DIRECTORY_SEPARATOR);
         define('MM_APP_PATH', $path . MM_DS . 'Application');
         define('MM_LIB_PATH', MM_APP_PATH . MM_DS . 'Libraries');
 
-        // Setup request variable
-        self::$request = ($pos = strpos($_SERVER['REQUEST_URI'], '?')) ? 
-                            substr($_SERVER['REQUEST_URI'], 0, $pos) : $_SERVER['REQUEST_URI'];
-
-        // Initialize loader
-        self::$_loader = MM_Loader::getInstance();
+        $this->setLoader(Loader::getInstance());
         
-        // Setup autoloader
-        spl_autoload_register(array(self::$_loader, 'autoload'));
+        $this->setConfig($this->load('config', 'Main'));
 
-        // Load main config
-        self::$_config = self::load('config', 'Main');
+        $this->setEventManager(new EventManager());
 
-        // Load event manager
-        if (!isset(self::$_config['debug']) || !self::$_config['debug']) {
-            self::$_eventManager = new MM_EventManager();
-        } else {
-            self::$_eventManager = new MM_DebugEventManager();
-            MM::extend('MM_Debug');
-        }
-
-        // Modify PHP environment configuration
-        if (isset(self::$_config['php_settings'])) {            
-            foreach (self::$_config['php_settings'] as $setting => $value) {
+        if (($settings = $this->config('phpSettings')) !== null) {
+            if (!is_array($settings)) {
+                throw new Exception("'phpSettings' configuration must be of type array");
+            }
+            
+            foreach($settings as $setting => $val) {
                 ini_set($setting, $value);
             }
         }
+        
+        if (($plugins = $this->config('plugins')) !== null) {
 
-        // Load plugins
-        if (isset(self::$_config['plugins'])) {
-            foreach (self::$_config['plugins'] as $plugin) {
-                MM::extend($plugin);
+            if (!is_array($plugins)) {
+                throw new Exception("'plugins' configuration must be of type array");
+            }
+            
+            foreach ($plugins as $plugin) {
+                $this->extend($plugin);
             }
         }
 
         // Set dispatcher
-        MM::setDispatcher(function($controller, $action) {
-            MM::dispatcher($controller, $action);
+        $this->setDispatcher(function($controller, $action) {
+            Core::getInstance()->dispatcher($controller, $action);
         });
     }
-
-    /**
-     * Serve an HTTP request through the framework.
-     * @param string $path Path to application parent directory.
-     * @param string $env Configuration section to load.
-     */
-    public static function serve($path, $env)
+    
+    public function serve($path, $env)
     {
         try {
-            // initialize framework
-            self::init($path, $env);
-
-            // post init event
-            self::trigger('post-init');
-
-            // pre dispatch event
-            self::trigger('pre-dispatch');
-
-            MM::dispatch();
-
-            // post dispatch event
-            self::trigger('post-dispatch');
-        } catch (Exception $e) {
-            MM::$_error = $e;
-
-            if (MM::$status == 200) {
-                MM::$status = 500;
-            }
-
-            MM::setController('Error_Error');
-            MM::setAction('Error');
-
-            // pre error event
-            self::trigger('pre-error');
-
-            MM::$response .= ob_get_clean();
+            $this->init($path, $env);
             
-            MM::setDispatcher(function($controller, $action) {
-                MM::dispatcher($controller, $action);
-            });
-
-            MM::$headers['Status'] = MM::$status;
-            MM::dispatch();
-
-            // post error event
-            self::trigger('post-error');
+            $this->_trigger('post-init');
+            
+            $this->_trigger('pre-dispatch');
+            
+            $this->dispatch();
+            
+            $this->_trigger('post-dispatch');
+            
+        } catch (Exception $e) {
+            print_r($e->getMessage());
+            print_r($e->getFile());
+            print_r($e->getLine());
         }
+        
+        $this->_trigger('pre-render');
 
-        // render response to client
-        self::render();
+        $this->getResponse()->render();
     }
     
-    /**
-     * Load controller and call action.
-     * @param string $controller Controller name.
-     * @param string $action Action name.
-     */
-    public static function dispatcher($controller, $action)
-    {
-        // Load controller
-        $controller = MM::load('controller', $controller);
-
-        // Dispatch request
-        $controller->$action();
-    }
-    
-    /**
-     * Start output buffer and call dispatcher.
-     */
-    public static function dispatch()
-    {
-        ob_start();
-        
-        $dispatcher = self::$dispatch;
-        $dispatcher(self::$_controller, self::$_action);
-        
-        MM::$response .= ob_get_clean();
-    }
-
-    /**
-     * Return any errors caught by Mighty.
-     */
-    public static function getError()
-    {
-        return self::$_error;
-    }
-
     /**
      * Framework config accessor method.
      * @param string $key Configuration array key.
      */
-    public static function config($key)
+    public function config($key)
     {
-        if (isset(self::$_config[$key])) {
-            return self::$_config[$key];
+        if (isset($this->_config[$key])) {
+            return $this->_config[$key];
         }
+
+        return null;
+    }
+
+    public function dispatcher($controller, $action)
+    {
+        $controller = $this->load('controller', $controller);
+        
+        $controller->$action();
     }
 
     /**
-     * @see MM_Loader::load()
+     * Start output buffer and call dispatcher.
+     */
+    public function dispatch()
+    {
+        ob_start();
+        
+        $controller = $this->getController();
+        if (!is_string($controller)) {
+            throw new Exception("No controller set.");
+        }
+        
+        $action = $this->getAction();
+        if (!is_string($action)) {
+            throw new Exception("No controller set.");
+        }
+
+        $dispatcher = $this->getDispatcher();
+        $dispatcher($controller, $action);
+        
+        $this->getResponse()->setBody(ob_get_clean());
+    }
+    
+    /**
+     * @see MM\Loader::load()
      * @param string $type File type.
      * @param string $name File name.
      */
-    public static function load($type, $name)
+    public function load($type, $name)
     {
-        return self::$_loader->load($type, $name);
+        return $this->_loader->load($type, $name);
     }
 
     /**
      * Initialize a Mighty compatible plugin.
      * @param string $plugin Plugin name.
      */
-    public static function extend($plugin)
+    public function extend($plugin)
     {
         $plugin::init();
     }
@@ -284,48 +183,7 @@ class MM
      */
     public static function register($event, $callback, $priority = 0)
     {
-        self::$_eventManager->register($event, $callback, $priority);
-    }
-
-    /**
-     * Output headers and send response to client.  If no $response is provided,
-     * output MM::$response.
-     * @param string|null $response Optional content to output to client.
-     */
-    public static function render($response = null)
-    {
-        foreach (self::$headers as $header => $value) {
-            header("$header: $value");
-        }
-
-        echo ($response) ? $response : self::$response;
-    }
-
-    /**
-     * Override dispatch action.
-     * @param string $action Method name.
-     */
-    public static function setAction($action)
-    {
-        self::$_action = "{$action}Action";
-    }
-
-    /**
-     * Override default dispatch function.
-     * @param Closure $callback
-     */
-    public static function setDispatcher(Closure $callback)
-    {
-        self::$dispatch = $callback;
-    }
-
-    /**
-     * Override dispatch controller.
-     * @param string $controller Controller name.
-     */
-    public static function setController($controller)
-    {
-        self::$_controller = "{$controller}Controller";
+        Core::getInstance()->_register($event, $callback, $priority);
     }
 
     /**
@@ -336,22 +194,129 @@ class MM
      */
     public static function trigger($event, array $input = array(), array &$return = null)
     {
-        self::$_eventManager->trigger($event, $input, $return);
+        Core::getInstance()->_trigger($event, $input, $return);
+    }
+
+    public function setController($controller)
+    {
+        $this->_controller = $controller;
+    }
+    
+    public function getController()
+    {
+        return $this->_controller;
+    }
+    
+    public function setAction($action)
+    {
+        $this->_action = $action;
+    }
+    
+    public function getAction()
+    {
+        return $this->_action;
+    }
+    
+    public function setResponse(HttpResponse $response)
+    {
+        $this->_response = $response;
+    }
+    
+    public function getResponse()
+    {
+        return $this->_response;
+    }
+    
+    public function setRequest(HttpRequest $request)
+    {
+        $this->_request = $request;
+    }
+    
+    public function getRequest()
+    {
+        return $this->_request;
+    }
+
+    private function setConfig($config)
+    {
+        if (isset($this->_config)) {
+            return;
+        }
+        
+        $this->_config = $config;
+    }
+    
+    public function getConfig()
+    {
+        return $this->_config;
+    }
+
+    /**
+     * Override default dispatch function.
+     * @param Closure $callback
+     */
+    public function setDispatcher(Closure $callback)
+    {
+        $this->_dispatcher = $callback;
+    }
+
+    public function getDispatcher()
+    {
+        return $this->_dispatcher;
+    }
+    
+    private function setEventManager(EventManager $eventManager)
+    {
+        $this->_eventManager = $eventManager;
+    }
+    
+    private function setLoader(Loader $loader)
+    {
+        if (isset($this->_loader)) {
+            return;
+        }
+        
+        $this->_loader = $loader;
+    }
+    
+    private function _register($event, $callback, $priority)
+    {
+        $this->_eventManager->register($event, $callback, $priority);
+    }
+    
+    private function _trigger($event, array $input = array(), array &$return = null)
+    {
+        $this->_eventManager->trigger($event, $input, $return);
+    }
+    
+    private function __construct()
+    {
+        $this->setRequest(new HttpRequest(array(
+                            'uri' => $_SERVER['REQUEST_URI'],
+                            'method' => $_SERVER['REQUEST_METHOD'])));
+                            
+        $this->setResponse(new HttpResponse());
+    }
+    
+    public static function getInstance()
+    {
+        if (!self::$_instance) {
+            self::$_instance = new self();
+        }
+        
+        return self::$_instance;
     }
 }
 
-/**
- * Framework event manger - enables plugin support.
- * @category Mighty MVC
- * @package Mighty Core
- */
-class MM_EventManager
+class EventManager
 {
     /**
      * MM_EventManager configuration.
      * @var array
      */
-    private $_config;
+    private $_config = array(
+        'max_depth' => 20,
+    );
 
     /**
      * Array of events
@@ -374,7 +339,11 @@ class MM_EventManager
      */
     public function __construct()
     {
-        $this->_config = MM::config('events');
+        $config = Core::getInstance()->config('events');
+
+        if ($config) {
+            $this->setConfig($config);
+        }
     }
 
     /**
@@ -385,6 +354,10 @@ class MM_EventManager
      */
     public function register($events, Closure $callback, $priority = 0)
     {
+        if (!is_int($priority)) {
+            throw new Exception("Event priorities must be of type integer");
+        }
+    
         if (!is_array($events)) {
             $events = array($events);
         }
@@ -394,7 +367,11 @@ class MM_EventManager
             $this->_status[$event] = false;
 
             // Register event
-            $this->_events[$event][$priority][] = $callback;
+            if (!isset($this->_events[$event])) {
+                $this->_events[$event] = new \SplPriorityQueue();
+            }
+            
+            $this->_events[$event]->insert($callback, $priority);
         }
     }
 
@@ -413,96 +390,236 @@ class MM_EventManager
         if (!isset($this->_events[$event])) {
             return;
         }
-
-        if (!$this->_status[$event]) {
-            krsort($this->_events[$event]);
-            $this->_status[$event] = true;
-        }
      
         $this->_stack[] = $event;
-
         $output = '';
-        foreach ($this->_events[$event] as $priority => $callbacks) {
-            foreach ($callbacks as $callback) {
-                if ($callback instanceof Closure) {
-                    // Reset result
-                    $result = '';
+        foreach ($this->_events[$event] as $callback) {
+            if ($callback instanceof Closure) {
+                // Reset result
+                $result = '';
 
-                    // Create buffer for callback
-                    ob_start();
+                // Create buffer for callback
+                ob_start();
 
-                    // Execute callback
-                    $result = $callback($input);
-                    if ($result) {
-                        $return[$event] = $result;
-                    }
-                    
-                    // End buffer and store output
-                    $output .= ob_get_clean();
+                // Execute callback
+                $result = $callback($input);
+                if ($result) {
+                    $return[$event] = $result;
                 }
+        
+                // End buffer and store output
+                $output .= ob_get_clean();
             }
         }
 
         // Append output to framework request buffer
-        MM::$response .=  $output;
+        Core::getInstance()->getResponse()->append($output);
             
         array_pop($this->_stack);
     }
+
+    public function setConfig($config)
+    {
+        $this->_config = $config;
+    }
 }
 
-/**
- * Mighty class loader.
- * @category Mighty MVC
- * @package Mighty Core
- */
-class MM_Loader
+class HttpRequest
 {
-    /**
-     * @var array Map of classes to relative library locations.
-     */
-    private $_classMap = array(
-        'MM_Acl' => 'MM/Plugins.php',
-        'MM_Debug' => 'MM/Debug/Debug.php',
-        'MM_DebugEventManager' => 'MM/Debug/Debug.php',
-        'MM_Layout' => 'MM/Plugins.php',
-        'MM_Redbean' => 'MM/Plugins.php',
-        'MM_Registry' => 'MM/Utilities.php',
-        'MM_Router' => 'MM/Plugins.php',
-        'MM_Session' => 'MM/Plugins.php',
-        'MM_Utilities' => 'MM/Utilities.php',
-    );
+    private $_fragment;
+    private $_host;
+    private $_method;
+    private $_pass;
+    private $_path;
+    private $_port;
+    private $_query;
+    private $_scheme;
+    private $_user;
+    
+    public function __construct(array $options)
+    {
+        foreach ($options as $property => $option) {
+            
+            switch ($property) {
+                case 'uri':
+                    $parsed = parse_url($option);
+                    
+                    foreach ($parsed as $attribute => $value) {
+                        $this->{'set' . $attribute}($value);
+                    }
+                    break;
+                case 'method':
+                    $this->_method = strtolower($option);
+                    break;
+            }
 
-    /**
-     * @var array of loaded libraries
-     */
-    private $_loaded = array('MM' => true);
+        }
+    }
+    
+    public function setFragment($fragment)
+    {
+        $this->_fragment = $fragment;
+    }
+    
+    public function setHost($host)
+    {
+        $this->_host = $host;
+    }
+    
+    public function setMethod($method)
+    {
+        $this->_method = $method;
+    }
+    
+    public function setPass($pass)
+    {
+        $this->_pass = $pass;
+    }
+    
+    public function setPath($path)
+    {
+        $this->_path = $path;
+    }
+    
+    public function setPort($port)
+    {
+        $this->_port = $port;
+    }
+    
+    public function setQuery($query)
+    {
+        $this->_query = $query;
+    }
+    
+    public function setScheme($scheme)
+    {
+        $this->_scheme = $scheme;
+    }
+    
+    public function setUser($user)
+    {
+        $this->_user = $user;
+    }
+}
+
+class HttpResponse
+{
+    private $_body = '';
+    private $_headers = array();
+    private $_status;
+    
+    public function append($content)
+    {
+        $this->_body .= (string) $content;
+    }
+    
+    public function prepend($content)
+    {
+        $this->_body = (string) $content . $this->_body;
+    }
+    
+    public function getBody()
+    {
+        return $this->_body;
+    }
+    
+    public function setBody($content)
+    {
+        $this->_body = (string) $content;
+    }
+    
+    public function setStatus($status)
+    {
+        $this->_status = $status;
+    }
+    
+    public function getStatus()
+    {
+        return $this->_status;
+    }
+    
+    public function render()
+    {
+        exit($this->_body);
+    }
+}
+
+class Loader
+{
+    private static $_instance;
+    
+    private $_classMap = array(
+        'MM\\Router' => 'MM/Plugins.php',
+    );
     
     /**
-     * @var MM_Loader Singleton instance
+     * Load Mighty file.
+     * @param string $type Filetype to load.
+     * @param string $name Filename to load.
      */
-    private static $_instance;
-
-    /**
-     * Private constructor to enforce singleton.
-     */
-    private function __construct(){}
-
-    /**
-     * Get singleton instance of MM_Loader
-     */
-    public static function getInstance()
+    public function load($type, $name)
     {
-        if (!self::$_instance) {
-            self::$_instance = new self();
+        switch($type) {
+            case 'config':
+                return $this->loadConfig($name);
+                break;
+            case 'controller':
+                return $this->loadController($name);
+                break;
+            default:
+                throw new Exception("MM\\Loader cannot load type: $type");
+                break;
         }
-        
-        return self::$_instance;
+
+        return $this->$call($name);
+    }
+    
+    /**
+     * Load config file from MM_APP_PATH/Configs/
+     * @param string $name Filename.
+     */
+    private function loadConfig($name)
+    {
+        $config = require MM_APP_PATH . MM_DS . 'Configs' . MM_DS . $name . '.php';
+        return $config[MM_ENV];
     }
 
     /**
-     * Mighty autoloader.
-     * @param string $class Classname
+     * Load controller file from MM_APP_PATH/Controllers/ - controller name represents
+     * file path; underscores (_) are translated into directory separators.
+     * @param string $name Controller name.
      */
+    private function loadController($name)
+    {
+        $filePath = MM_APP_PATH . MM_DS . 'Controllers' . MM_DS . str_replace('\\', MM_DS, $name) . '.php';
+
+        if (!file_exists($filePath)) {
+            throw new Exception("Controller ($name) does not exist.");
+        }
+        
+        require $filePath;
+        
+        return new $name();
+    }
+
+    /**
+     * Load extension file from MM_APP_PATH/Extensions/
+     * @param string $path Relative file path in extensions directory.
+     */
+    private function loadExtension($path)
+    {
+        require MM_APP_PATH . MM_DS . 'Extensions' . MM_DS . $path . '.php';
+    }
+
+    /**
+     * Load config file from MM_APP_PATH/Models/
+     * @param string $model Model name.
+     */
+    private function loadModel($model)
+    {
+        $this->_classMap["{$model}_Model"] = MM_APP_PATH . MM_DS . 'Models' . MM_DS . str_replace('_', MM_DS, $model) . '.php';
+    }
+    
     public function autoload($class)
     {
         if (!isset($this->_classMap[$class])) {
@@ -540,61 +657,55 @@ class MM_Loader
         }
     }
     
-    /**
-     * Load Mighty file.
-     * @param string $type Filetype to load.
-     * @param string $name Filename to load.
-     */
-    public function load($type, $name)
-    {
-        $call = 'load' . ucfirst($type);
-        return $this->$call($name);
+    private function __construct()
+    {   
+        spl_autoload_register(array($this, 'autoload'));
     }
-
-    /**
-     * Load config file from MM_APP_PATH/Configs/
-     * @param string $name Filename.
-     */
-    private function loadConfig($name)
+    
+    public static function getInstance()
     {
-        $config = require MM_APP_PATH . MM_DS . 'Configs' . MM_DS . $name . '.php';
-        return $config[MM_ENV];
-    }
-
-    /**
-     * Load controller file from MM_APP_PATH/Controllers/ - controller name represents
-     * file path; underscores (_) are translated into directory separators.
-     * @param string $name Controller name.
-     */
-    private function loadController($name)
-    {
-        $filePath = MM_APP_PATH . MM_DS . 'Controllers' . MM_DS . str_replace('_', MM_DS, $name) . '.php';
-        
-        if (!file_exists($filePath)) {
-            throw new Exception("Controller ($name) does not exist.");
+        if (!self::$_instance) {
+            self::$_instance = new self();
         }
         
-        require MM_APP_PATH . MM_DS . 'Controllers' . MM_DS . str_replace('_', MM_DS, $name) . '.php';
+        return self::$_instance;
+    }
+}
+
+class Profiler
+{
+    private static $_instance;
+
+    private $_timestamps;
+    
+    private function __construct(){}
+    
+    public function add($timestamp)
+    {
+        if (isset($this->_timestamps[$timestamp])) {
+            return;
+        }
         
-        return new $name();
+        $this->_timestamps[$timestamp] = microtime(true);
     }
-
-    /**
-     * Load extension file from MM_APP_PATH/Extensions/
-     * @param string $path Relative file path in extensions directory.
-     */
-    private function loadExtension($path)
+    
+    public function get($timestamp)
     {
-        require MM_APP_PATH . MM_DS . 'Extensions' . MM_DS . $path . '.php';
+        return $this->_timestamps[$timestamp];
     }
-
-    /**
-     * Load config file from MM_APP_PATH/Models/
-     * @param string $model Model name.
-     */
-    private function loadModel($model)
+    
+    public function getTimestamps()
     {
-        $this->_classMap["{$model}_Model"] = MM_APP_PATH . MM_DS . 'Models' . MM_DS . str_replace('_', MM_DS, $model) . '.php';
+        return $this->_timestamps;
+    }
+    
+    public static function getInstance()
+    {
+        if (!self::$_instance) {
+            self::$_instance = new self();
+        }
+        
+        return self::$_instance;
     }
 }
 
@@ -604,7 +715,7 @@ class MM_Loader
  * @category Mighty MVC
  * @package Mighty Core
  */
-class MM_View extends ArrayObject
+class View extends \ArrayObject
 {
     /**
      * @var string Absolute file path to view script.
@@ -616,15 +727,11 @@ class MM_View extends ArrayObject
      * @param string $path Relative file path to view script..
      * @param array|null $array Array to initiate ArrayObject storage.
      */
-    public function __construct($path, array $array = null)
+    public function __construct($path, array $array = array())
     {
         $this->_file = MM_APP_PATH . MM_DS . 'Views' . MM_DS . $path . '.php';
 
-        parent::__construct(array(), ArrayObject::ARRAY_AS_PROPS);
-        
-        if ($array) {
-            $this->exchangeArray($array);
-        }
+        parent::__construct($array, \ArrayObject::ARRAY_AS_PROPS);
     }
     
     /**
@@ -656,13 +763,13 @@ class MM_View extends ArrayObject
      */
     public function render()
     {
-        MM::trigger('pre-viewRender', array($this->_file, $this->getArrayCopy()));
+        Core::trigger('pre-viewRender', array($this->_file, $this->getArrayCopy()));
         
         ob_start();
         require $this->_file;
         $output = ob_get_clean();
         
-        MM::trigger('post-render', array($this->_file, $this->getArrayCopy()));
+        Core::trigger('post-viewRender', array($this->_file, $this->getArrayCopy()));
         return $output;
     }
 }

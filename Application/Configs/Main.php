@@ -1,9 +1,7 @@
 <?php
 
 return array(
-    
-    // Development configuration.
-    'dev' => array(
+	'dev' => array(
         
         // PHP environment settings
         'php_settings' => array(
@@ -22,9 +20,10 @@ return array(
         'events' => array(
             'max_depth' => 20
         ),
-        
+		
         // List of globally loaded plugins
         'plugins' => array(
+			'MM\Router',
         ),
-    ),
+	)
 );

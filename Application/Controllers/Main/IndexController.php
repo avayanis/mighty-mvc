@@ -1,11 +1,15 @@
 <?php
 
-class Main_IndexController {
+namespace Main;
 
-    public function IndexAction() {
+use MM;
 
-        $view = new MM_View('Main/Index');
- 
-        echo $view->render();
-    }
+class IndexController
+{
+	public function IndexAction()
+	{
+		$view = new MM\View("requirements");
+	
+		echo $view->render();
+	}
 }
