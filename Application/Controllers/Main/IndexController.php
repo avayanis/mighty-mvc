@@ -8,8 +8,8 @@ class IndexController
 {
 	public function IndexAction()
 	{
-		$view = new MM\View("requirements");
-	
-		echo $view->render();
+		$view = new MM\View("Main/Index");
+		
+		$view->render();
 	}
 }

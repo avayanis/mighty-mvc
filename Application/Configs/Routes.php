@@ -1,7 +1,7 @@
 <?php
 
 return array(
-    'dev' => array(
-        '^/$' => 'Main_Index',
-    )
+	'dev' => array(
+		'^/$' => 'Main\\Index',
+	)
 );

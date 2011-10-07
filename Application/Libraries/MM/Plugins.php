@@ -32,97 +32,107 @@ namespace MM;
 
 class Router
 {    
-    /**
-     * Singleton placeholder instance.
-     * @var MM_Router
-     */
-    private static $_instance; 
+	/**
+	 * Singleton placeholder instance.
+	 * @var MM_Router
+	 */
+	private static $_instance; 
 
-    /**
-     * Array of route patterns.
-     * @var array
-     */
-    private $_routes;
+	/**
+	 * Array of route patterns.
+	 * @var array
+	 */
+	private $_routes;
 
-    /**
-     * Routed controller params.
-     * @var array 
-     */
-    public $params;
-    
-    /**
-     * Route current request.
-     */
-    public function route() {
-        $controller = false;
-        $action = false;
+	/**
+	 * Routed controller params.
+	 * @var array 
+	 */
+	private $_params;
+	
+	/**
+	 * Route current request.
+	 */
+	public function route() {
+		$controller = false;
+		$action = false;
 
-        Core::trigger('pre-route');
+		Core::trigger('pre-route');
 
-        foreach ($this->getRoutes() as $route => $target) {
-            if (preg_match('{' . $route . '}', Core::getRequest()->getPath(), $matches)) {
+		foreach ($this->getRoutes() as $route => $target) {
+			if (preg_match('{' . $route . '}', Core::getInstance()->getRequest()->getPath(), $matches)) {
 
-                $tmp = explode('.', $target);
-                $controller = $tmp[0];
+				$tmp = explode('.', $target);
+				$controller = $tmp[0];
 
-                if (isset($tmp[1])) {
-                    $action = $tmp[1];
-                }
+				if (isset($tmp[1])) {
+					$action = $tmp[1];
+				}
 
-                array_shift($matches);
-                $instance->params = (($matches) ? $matches : array());
-                break;
-            }
-        }
+				array_shift($matches);
+				Router::getInstance()->setParams($matches);
+				break;
+			}
+		}
 
-        if (!$controller) {
-            $controller = 'Error_Error';
-            $action = 'Error';
-            Core::getInstance()->getResponse()->setStatus(400);
-        }
+		if (!$controller) {
+			$controller = 'Error_Error';
+			$action = 'Error';
+			Core::getInstance()->getResponse()->setStatus(400);
+		}
 
-        Core::setController($controller);
-        if ($action) {
-            Core::setAction($action);
-        }
-        Core::trigger('post-route');
-    }
-    
-    public function getRoutes()
-    {
-        return $this->_routes;
-    }
-    
+		Core::getInstance()->setController($controller);
+		if ($action) {
+			Core::getInstance()->setAction($action);
+		}
+		Core::trigger('post-route');
+	}
+	
+	public function setParams($params)
+	{
+		$this->_params = $params;
+	}
+	
+	public function getParams()
+	{
+		return $this->_params;
+	}
+	
+	public function getRoutes()
+	{
+		return $this->_routes;
+	}
+	
 	public static function init()
 	{
 		$instance = Core::getInstance();
 
 		$instance->register("post-init", function() {
-		    
+			
 			Router::getInstance()->route();
 			
 		}, (PHP_INT_MAX * -1)-1);
 		
 		$instance->register("pre-dispatch", function() {
-		    
+			
 		}, (PHP_INT_MAX * -1)-1);
 	}
 	
-    /**
-     * Get singleton instance of MM_Router
-     */
-    public static function getInstance() {
-        if (!self::$_instance) {
-            self::$_instance = new self();
-        }
-        return self::$_instance;
-    }
+	/**
+	 * Get singleton instance of MM_Router
+	 */
+	public static function getInstance() {
+		if (!self::$_instance) {
+			self::$_instance = new self();
+		}
+		return self::$_instance;
+	}
 	
-    /**
-     * Private constructor to enforce singleton.
-     */
-    private function __construct()
-    {
-        $this->_routes = Core::getInstance()->load('config', 'Routes');
-    }
+	/**
+	 * Private constructor to enforce singleton.
+	 */
+	private function __construct()
+	{
+		$this->_routes = Core::getInstance()->load('config', 'Routes');
+	}
 }

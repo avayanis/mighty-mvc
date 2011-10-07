@@ -1,46 +1,80 @@
 <?php
 
-class MM_Debug
+namespace MM\Debug;
+
+use MM;
+
+class Core
 {
 	private static $_instance = null;
 	
 	private $_eventStack;
 	
-	public static function init() {
-		
-		MM::register('post-dispatch', function() {
+	private $_stats = array();
+	
+	public static function init()
+	{
+		MM\Core::register('post-init', function() {
 			
-			$response = MM::$response;
-			
-			// Find end of head
-			$pos = strpos($response, '</head>');
-			$head = substr($response, 0, $pos);
-			$rest = substr($response, $pos);
-			
-			MM::$response = $head . '<script type="text/javascript" src="/mm_debug/js"></script>' . $rest;
-			
-		}, PHP_INT_MAX);
-		
-		MM::register('post-init', function() {
-			
-			$requestPath = explode('/', MM::$request);
+			$requestPath = explode('/', MM\Core::getInstance()->getRequest()->getPath());
 			if ($requestPath[1] == 'mm_debug') {
-				switch($requestPath[2]) {
+				
+				$pathinfo = pathinfo($requestPath[2]);
+
+				switch($pathinfo['extension']) {
 					case 'js':
 						header('Content-Type: application/javascript');
-						exit(require('MMDebug.js'));
 						break;
 					case 'css':
 						header('Content-Type: text/css');
-						exit(require('MMDebug.css'));
 						break;
 					default:
 						break;
 				}
+				
+				exit(require("static/{$requestPath[2]}"));
 			}
 			
 		}, PHP_INT_MAX);
-		
+
+		MM\Core::register('pre-render', function() {
+			
+			$stats = Core::getInstance()->getStats();
+
+			$stats['files'] 		= get_included_files();
+			$stats['extensions'] 	= get_loaded_extensions();
+			$stats['callstack'] 	= MM\Core::getInstance()->getEventManager()->getCallstack();
+			
+			foreach($stats['files'] as $index => $file) {
+				if (strpos($file, 'MM/Debug') !== false) {
+					unset($stats['files'][$index]);
+				}
+			}
+
+			$response = MM\Core::getInstance()->getResponse()->getBody();
+			
+			// Find end of head
+			$pos 	= strpos($response, '</body>');
+			$end 	= substr($response, 0, $pos);
+			$rest 	= substr($response, $pos);
+			
+			// Collect memory usage stats
+			// MM\Profiler::add('rendering');
+
+			// $stats['profiler'] = MM\Profiler::getDataSeries();
+
+			// Insert call to debug js
+			MM\Core::getInstance()->getResponse()->setBody($end . 
+				'<script type="text/javascript">mmdebug_stats = ' . json_encode($stats) . '</script>' .
+				'<script type="text/javascript" src="/mm_debug/debug.js"></script>' .
+				$rest);
+			
+		}, PHP_INT_MAX);
+	}
+	
+	public function getStats()
+	{
+	   	return $this->_stats;
 	}
 	
 	private function __construct() {}
@@ -55,19 +89,34 @@ class MM_Debug
 	}
 }
 
-class MM_DebugEventManager extends MM_EventManager
+class EventManager extends \MM\EventManager
 {
-	private $_debugger;
+	private $_callStack = array();
 	
 	public function __construct()
 	{
 		parent::__construct();
-		$this->_debugger = MM_Debug::getInstance();
 	}
 	
 	public function trigger($event, array $input = array(), array &$return = null)
 	{
+		$backtrace = debug_backtrace();
+
+		$this->_callstack[] = array($event => array(
+			'file' => $backtrace[2]['file'],
+			'line' => $backtrace[2]['line'],
+			'class' => $backtrace[2]['class'],
+			'function' => $backtrace[2]['function'],
+			'eventstack' => $this->_stack,
+		));
+
+		//MM\Profiler::add($event . "-" . count($this->_callstack));
+		
 		parent::trigger($event, $input, $return);
 	}
+	
+	public function getCallstack()
+	{
+	   return $this->_callstack;
+	}
 }
-

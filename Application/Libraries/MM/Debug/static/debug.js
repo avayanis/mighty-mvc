@@ -8,12 +8,12 @@
 	mmdebug = {
 		init : function(jQuery) {
 			$j = jQuery;
-			
+			console.log(mmdebug_stats);
 	        $j('head').append(
 	            $j('<link>').attr({
 	                rel: 'stylesheet',
 	                type: 'text/css',
-	                href: '/mm_debug/css'
+	                href: '/mm_debug/debug.css'
 	            }).ready(function(e) {
 	                mmdebug.buildInterface(mmdebug.bindEvents);
 	            })
@@ -38,20 +38,7 @@
 				.attr({
 					id : "mmdebug_container"
 				})
-				.append($j("<div>")
-					.attr({
-						id : "mmdebug_body"
-					})
-				)			
-				.append($j("<div>")
-					.append($j("<h4>")
-						.attr({
-							id : "mmdebug_header"
-						})
-						.text("Mighty MVC debug")
-					)
-				)
-				.prependTo("body");
+				.appendTo("body");
 				
 			callback();
 		}
@@ -63,7 +50,7 @@
 	    }
 
 	    js.type = "text/javascript";
-	    js.src = 'https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js';
+	    js.src = '/mm_debug/jquery-1.6.4.min.js';
 	    js.onload = function() {
 	        $.noConflict();
 	        mmdebug.init(jQuery);
