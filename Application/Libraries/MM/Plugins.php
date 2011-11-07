@@ -30,14 +30,8 @@
 
 namespace MM;
 
-class Router
+class Router extends Plugin
 {    
-	/**
-	 * Singleton placeholder instance.
-	 * @var MM_Router
-	 */
-	private static $_instance; 
-
 	/**
 	 * Array of route patterns.
 	 * @var array
@@ -103,7 +97,7 @@ class Router
 		return $this->_routes;
 	}
 	
-	public static function init()
+	public function init()
 	{
 		$instance = Core::getInstance();
 
@@ -119,19 +113,9 @@ class Router
 	}
 	
 	/**
-	 * Get singleton instance of MM_Router
-	 */
-	public static function getInstance() {
-		if (!self::$_instance) {
-			self::$_instance = new self();
-		}
-		return self::$_instance;
-	}
-	
-	/**
 	 * Private constructor to enforce singleton.
 	 */
-	private function __construct()
+	protected function setup()
 	{
 		$this->_routes = Core::getInstance()->load('config', 'Routes');
 	}

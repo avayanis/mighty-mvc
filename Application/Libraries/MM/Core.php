@@ -177,7 +177,7 @@ class Core
 	 */
 	public function extend($plugin)
 	{
-		$plugin::init();
+		$plugin::getInstance()->init();
 	}
 
 	/**
@@ -385,7 +385,9 @@ class EventManager
 	 */
 	public function trigger($event, array $input = array(), array &$return = null)
 	{
-		if ((($max = $this->_config['max_depth']) && ($count = count($this->_stack)) > $max)) {
+		if (isset($this->_config['max_depth']) && 
+			(($max = $this->_config['max_depth']) && 
+			($count = count($this->_stack)) > $max)) {
 			throw new Exception("Maximum event depth ($max) reached.");
 		}
 
@@ -603,6 +605,7 @@ class Loader
 		
 		// Plugins
 		'MM\\Router' => 'MM/Plugins.php',
+		'MM\\Twig' => 'MM/Twig.php',
 
 		// Utilities
 		'MM\\Profiler' => 'MM/Utilities.php',
@@ -623,9 +626,10 @@ class Loader
 		switch($type) {
 			case 'config':
 				return $this->loadConfig($name);
-				break;
 			case 'controller':
 				return $this->loadController($name);
+			case 'model':
+				$this->loadModel($name);
 				break;
 			default:
 				throw new Exception("MM\\Loader cannot load type: $type");
@@ -642,6 +646,11 @@ class Loader
 	private function loadConfig($name)
 	{
 		$config = require MM_APP_PATH . MM_DS . 'Configs' . MM_DS . $name . '.php';
+
+		if (!isset($config[MM_ENV])) {
+			throw new Exception("Config not defined for environment: " . MM_ENV);
+		}
+
 		return $config[MM_ENV];
 	}
 
@@ -661,15 +670,6 @@ class Loader
 		require $filePath;
 		
 		return new $name();
-	}
-
-	/**
-	 * Load extension file from MM_APP_PATH/Extensions/
-	 * @param string $path Relative file path in extensions directory.
-	 */
-	private function loadExtension($path)
-	{
-		require MM_APP_PATH . MM_DS . 'Extensions' . MM_DS . $path . '.php';
 	}
 
 	/**
@@ -731,6 +731,33 @@ class Loader
 		
 		return self::$_instance;
 	}
+}
+
+abstract class Plugin
+{
+	private static $_instances = array();
+
+	protected function setup() {}
+
+	abstract public function init();
+
+	final public static function getInstance()
+	{
+		$classname = get_called_class();
+
+		if (!isset(self::$_instances[$classname])) {
+			self::$_instances[$classname] = new $classname;
+		}
+
+		return self::$_instances[$classname];
+	}
+
+	final protected function __construct()
+	{
+		$this->setup();	
+	}
+
+	final protected function __clone() {}
 }
 
 /**

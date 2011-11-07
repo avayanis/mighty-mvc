@@ -4,18 +4,15 @@ namespace MM\Debug;
 
 use MM;
 
-class Core
-{
-	private static $_instance = null;
-	
+class Core extends MM\Plugin
+{	
 	private $_eventStack;
 	
 	private $_stats = array();
 	
-	public static function init()
+	public function init()
 	{
 		MM\Core::register('post-init', function() {
-			
 			$requestPath = explode('/', MM\Core::getInstance()->getRequest()->getPath());
 			if ($requestPath[1] == 'mm_debug') {
 				
@@ -38,8 +35,7 @@ class Core
 		}, PHP_INT_MAX);
 
 		MM\Core::register('pre-render', function() {
-			
-			$stats = Core::getInstance()->getStats();
+			$stats = MM\Debug\Core::getInstance()->getStats();
 
 			$stats['files'] 		= get_included_files();
 			$stats['extensions'] 	= get_loaded_extensions();
@@ -75,17 +71,6 @@ class Core
 	public function getStats()
 	{
 	   	return $this->_stats;
-	}
-	
-	private function __construct() {}
-
-	public static function getInstance()
-	{
-		if (!self::$_instance) {
-			self::$_instance = new self();
-		}
-		
-		return self::$_instance;
 	}
 }
 
