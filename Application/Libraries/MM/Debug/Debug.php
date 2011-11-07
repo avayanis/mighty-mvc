@@ -37,9 +37,9 @@ class Core extends MM\Plugin
 		MM\Core::register('pre-render', function() {
 			$stats = MM\Debug\Core::getInstance()->getStats();
 
-			$stats['files'] 		= get_included_files();
-			$stats['extensions'] 	= get_loaded_extensions();
-			$stats['callstack'] 	= MM\Core::getInstance()->getEventManager()->getCallstack();
+			$stats['files'] = get_included_files();
+			$stats['extensions'] = get_loaded_extensions();
+			$stats['callstack'] = MM\Core::getInstance()->getEventManager()->getCallstack();
 			
 			foreach($stats['files'] as $index => $file) {
 				if (strpos($file, 'MM/Debug') !== false) {
@@ -50,9 +50,9 @@ class Core extends MM\Plugin
 			$response = MM\Core::getInstance()->getResponse()->getBody();
 			
 			// Find end of head
-			$pos 	= strpos($response, '</body>');
-			$end 	= substr($response, 0, $pos);
-			$rest 	= substr($response, $pos);
+			$pos = strpos($response, '</body>');
+			$end = substr($response, 0, $pos);
+			$rest = substr($response, $pos);
 			
 			// Collect memory usage stats
 			// MM\Profiler::add('rendering');
