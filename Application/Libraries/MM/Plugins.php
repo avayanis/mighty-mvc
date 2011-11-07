@@ -99,15 +99,13 @@ class Router extends Plugin
 	
 	public function init()
 	{
-		$instance = Core::getInstance();
-
-		$instance->register("post-init", function() {
+		Core::register("post-init", function() {
 			
 			Router::getInstance()->route();
 			
 		}, (PHP_INT_MAX * -1)-1);
 		
-		$instance->register("pre-dispatch", function() {
+		Core::register("pre-dispatch", function() {
 			
 		}, (PHP_INT_MAX * -1)-1);
 	}

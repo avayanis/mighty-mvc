@@ -605,7 +605,6 @@ class Loader
 		
 		// Plugins
 		'MM\\Router' => 'MM/Plugins.php',
-		'MM\\Twig' => 'MM/Twig.php',
 
 		// Utilities
 		'MM\\Profiler' => 'MM/Utilities.php',
@@ -645,7 +644,7 @@ class Loader
 	 */
 	private function loadConfig($name)
 	{
-		$config = require MM_APP_PATH . MM_DS . 'Configs' . MM_DS . $name . '.php';
+		$config = require_once MM_APP_PATH . MM_DS . 'Configs' . MM_DS . $name . '.php';
 
 		if (!isset($config[MM_ENV])) {
 			throw new Exception("Config not defined for environment: " . MM_ENV);
@@ -667,7 +666,7 @@ class Loader
 			throw new Exception("Controller ($name) does not exist.");
 		}
 		
-		require $filePath;
+		require_once $filePath;
 		
 		return new $name();
 	}
@@ -684,17 +683,18 @@ class Loader
 	public function autoload($class)
 	{
 		if (!isset($this->_classMap[$class])) {
-			$class_path = explode('_', $class);
-			$library    = $class_path[0];
-			$core       = MM_LIB_PATH . MM_DS. $library . MM_DS . 'Core.php';
+			$classPath = explode('\\', $class);
+			$library = $classPath[0];
+			$core = MM_LIB_PATH . MM_DS. $library . MM_DS . 'Core.php';
 
 			if (file_exists($core) && !isset($this->_loaded[$library])) {
-				require $core;
+				require_once $core;
+
+				$coreLibrary = $library . '\Core';
 				$this->_loaded[$library] = true;
+				$this->_classMap = array_merge($coreLibrary::_libraries(), $this->_classMap);
 
-				$this->_classMap = array_merge($library::_libraries(), $this->_classMap);
-
-				if (!isset($class_path[1]))
+				if (!isset($classPath[1]))
 					return;
 
 				if (!isset($this->_classMap[$class])) {
@@ -709,7 +709,7 @@ class Loader
 			}
 		}
 
-		if ($location = $this->_classMap[$class]) {
+		if (isset($this->_classMap[$class]) && $location = $this->_classMap[$class]) {
 			if ($location[0] == '/') {
 				require $location;
 			} else {
