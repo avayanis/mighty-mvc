@@ -24,6 +24,8 @@ class Core extends MM\Plugin
 
 		$config = ($temp = MM\Core::getInstance()->config('twig')) ? array_merge($defaults, $temp) : $defaults;
 		$this->setConfig($config);
+
+		spl_autoload_register(array($this, 'autoload'));
 	}
 
 	public function setConfig(array $config = array())
@@ -43,11 +45,9 @@ class Core extends MM\Plugin
 	public function getLoader()
 	{
 		if (!$this->_loader) {
-			require __DIR__ . MM_DS . 'Autoloader.php';
-			
-			\Twig_Autoloader::register();
 
 			$config = $this->getConfig();
+
 			$this->setLoader(new $config['loaderInterface'](
 				$config['loader']
 			));
@@ -64,6 +64,9 @@ class Core extends MM\Plugin
 	public function getEnvironment()
 	{
 		if (!$this->_environment) {
+
+			$config = $this->getConfig();
+
 			$this->setEnvironment(
 				new \Twig_Environment($this->getLoader(), $config['environment'])
 			);
@@ -75,6 +78,16 @@ class Core extends MM\Plugin
 	public function setEnvironment($environment)
 	{
 		$this->_environment = $environment;
+	}
+
+	public function autoload($class)
+	{
+		if (strpos('Twig', $class) == 0) {
+			require __DIR__ . MM_DS . 'Autoloader.php';
+		
+			\Twig_Autoloader::register();
+			spl_autoload_unregister(array($this, 'autoload'));
+		}
 	}
 
 	public static function _libraries()

@@ -687,7 +687,7 @@ class Loader
 			$library = $classPath[0];
 			$core = MM_LIB_PATH . MM_DS. $library . MM_DS . 'Core.php';
 
-			if (file_exists($core) && !isset($this->_loaded[$library])) {
+			if (!isset($this->_loaded[$library]) && file_exists($core)) {
 				require_once $core;
 
 				$coreLibrary = $library . '\Core';
@@ -709,7 +709,7 @@ class Loader
 			}
 		}
 
-		if (isset($this->_classMap[$class]) && $location = $this->_classMap[$class]) {
+		if (isset($this->_classMap[$class]) && ($location = $this->_classMap[$class])) {
 			if ($location[0] == '/') {
 				require $location;
 			} else {
