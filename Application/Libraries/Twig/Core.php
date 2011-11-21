@@ -23,6 +23,7 @@ class Core extends MM\Plugin
 		);
 
 		$config = ($temp = MM\Core::getInstance()->config('twig')) ? array_merge($defaults, $temp) : $defaults;
+
 		$this->setConfig($config);
 
 		spl_autoload_register(array($this, 'autoload'));
@@ -98,8 +99,9 @@ class Core extends MM\Plugin
 
 class Template
 {
-	public static function get($templateName)
+	public static function get($template)
 	{
-		$environment = Core::getInstance()->getEnvironment();
+		$twig = Core::getInstance()->getEnvironment();
+		return $twig->loadTemplate($template);
 	}
 }

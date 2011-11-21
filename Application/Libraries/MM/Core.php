@@ -634,8 +634,6 @@ class Loader
 				throw new Exception("MM\\Loader cannot load type: $type");
 				break;
 		}
-
-		return $this->$call($name);
 	}
 	
 	/**
@@ -677,7 +675,7 @@ class Loader
 	 */
 	private function loadModel($model)
 	{
-		$this->_classMap["{$model}_Model"] = MM_APP_PATH . MM_DS . 'Models' . MM_DS . str_replace('_', MM_DS, $model) . '.php';
+		$this->_classMap["Model\\{$model}"] = MM_APP_PATH . MM_DS . 'Models' . MM_DS . str_replace('\\', MM_DS, $model) . '.php';
 	}
 	
 	public function autoload($class)
