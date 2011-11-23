@@ -67,12 +67,12 @@ class Core
 			$this->extend('MM\\Debug\\Core');
 		}
 
-		if (($settings = $this->config('phpSettings')) !== null) {
+		if (($settings = $this->config('php_settings')) !== null) {
 			if (!is_array($settings)) {
-				throw new Exception("'phpSettings' configuration must be of type array");
+				throw new Exception("'php_settings' configuration must be of type array");
 			}
 			
-			foreach($settings as $setting => $val) {
+			foreach($settings as $setting => $value) {
 				ini_set($setting, $value);
 			}
 		}
